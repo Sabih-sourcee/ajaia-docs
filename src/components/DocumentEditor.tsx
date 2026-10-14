@@ -91,9 +91,12 @@ export function DocumentEditor({ docId }: { docId: string }) {
         setSharedUserIds(data.sharedUserIds ?? []);
         setTitle(data.document.title);
 
-        const content = data.document.content;
-        if (content && typeof content === "object" && (content as any).type === "html-import") {
-          editor!.commands.setContent((content as any).html);
+        const content = data.document.content as
+          | { type: "html-import"; html: string }
+          | Record<string, unknown>
+          | null;
+        if (content && typeof content === "object" && "type" in content && content.type === "html-import") {
+          editor!.commands.setContent((content as { html: string }).html);
         } else {
           editor!.commands.setContent(content ?? "");
         }
