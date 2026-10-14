@@ -6,7 +6,7 @@ what was cut and why.
 
 ## Stack
 
-Next.js 14 (App Router, TypeScript) · Tailwind CSS · TipTap · Supabase (Postgres) · Vitest
+Next.js 14 (App Router, TypeScript) · Tailwind CSS · TipTap · Vercel Postgres (`@vercel/postgres`) · Vitest
 
 ## Mocked authentication
 
@@ -24,26 +24,29 @@ access control is enforced server-side based on that header — see
    npm install
    ```
 
-2. **Create a free Supabase project** at [supabase.com](https://supabase.com).
-
-3. **Run the schema and seed data** — open the Supabase SQL editor and run,
-   in order:
-   - `supabase/schema.sql`
-   - `supabase/seed.sql`
-
-4. **Set environment variables** — copy `.env.local.example` to `.env.local`
-   and fill in your Supabase project values (Project Settings → API):
+2. **Provision a free Vercel Postgres database** (no separate
+   signup/project needed beyond your Vercel account — this uses the same
+   project you deploy to):
 
    ```bash
-   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   npx vercel link        # link this folder to a Vercel project
+   npx vercel postgres create   # or do it from the dashboard: Storage -> Create Database -> Postgres
+   npx vercel env pull .env.local   # writes POSTGRES_URL and friends locally
    ```
 
-   Row Level Security is left off (access is checked in API route code), so
-   the anon key also works if you don't want to use the service role key.
+   (Alternatively, create the env vars manually — see `.env.local.example`.)
 
-5. **Run the dev server**
+3. **Run the schema and seed data** against that database:
+
+   ```bash
+   psql "$env:POSTGRES_URL_NON_POOLING" -f db/schema.sql
+   psql "$env:POSTGRES_URL_NON_POOLING" -f db/seed.sql
+   ```
+
+   (No `psql`? Paste the contents of both files into the Vercel dashboard's
+   Storage → your database → **Query** tab and run them in order.)
+
+4. **Run the dev server**
 
    ```bash
    npm run dev
@@ -51,7 +54,7 @@ access control is enforced server-side based on that header — see
 
    Open [http://localhost:3000](http://localhost:3000).
 
-6. **Run tests**
+5. **Run tests**
 
    ```bash
    npm test
@@ -78,9 +81,12 @@ paragraphs. Other file types or oversized files are rejected with a toast.
 
 1. Push this repo to GitHub.
 2. Import the repo in [Vercel](https://vercel.com/new).
-3. Add the same three environment variables from step 4 above in the
-   Vercel project settings (Environment Variables).
-4. Deploy. No build configuration changes are needed.
+3. Add a Postgres database to the project (Storage → Create Database →
+   Postgres, free tier) and connect it — this sets `POSTGRES_URL` and
+   friends as project env vars automatically.
+4. Run `db/schema.sql` then `db/seed.sql` against that database (via the
+   dashboard Query tab, or `psql` with the connection string from Storage).
+5. Deploy. No build configuration changes are needed.
 
-Supabase's free tier and Vercel's hobby tier are both sufficient for
+Vercel's hobby tier and its free Postgres tier are both sufficient for
 reviewing this project at no cost.

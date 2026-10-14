@@ -9,8 +9,11 @@
   JSON-serializable content (`editor.getJSON()`), a clean toolbar API, and
   first-party extensions for exactly what was asked (bold/italic/underline,
   headings, lists).
-- **Supabase (Postgres)** — a free, hosted Postgres with a generated REST-ish
-  client (`@supabase/supabase-js`). No ORM needed for three small tables.
+- **Vercel Postgres (`@vercel/postgres`)** — a free, hosted Postgres (Neon
+  under the hood) provisioned from the same Vercel project used for
+  deployment, so there's no separate database account/project to manage.
+  The `sql` tagged-template client is used directly; no ORM needed for three
+  small tables.
 - **Vitest** — fast, zero-config TypeScript test runner, good fit for pure
   unit tests of `/lib`.
 
@@ -49,7 +52,9 @@ for "who can do what" — routes never duplicate the logic.
 Row Level Security is intentionally **not** used: since auth is mocked at
 the app layer (not Postgres), RLS would either be a no-op or would need its
 own mock-auth bridge, adding complexity without real security benefit for a
-take-home. This is documented as a known gap for production use.
+take-home. This is documented as a known gap for production use. All queries
+go through `src/lib/db.ts`, the single module that imports `@vercel/postgres`
+— it's the only place that would change if the database were swapped again.
 
 ## What was prioritized
 

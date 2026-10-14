@@ -1,37 +1,19 @@
-import { supabaseAdmin } from "./supabaseAdmin";
+import { getDocumentById, getShareUserIds, DocumentRow } from "./db";
 import { AccessDocument } from "./access";
 
-export type DocumentRow = {
-  id: string;
-  title: string;
-  content: unknown;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
-};
+export type { DocumentRow };
 
 /** Fetches a document plus the user_ids it's shared with, for access checks. */
 export async function getDocumentWithShares(
   id: string
 ): Promise<{ doc: DocumentRow; access: AccessDocument } | null> {
-  const { data: doc, error } = await supabaseAdmin
-    .from("documents")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const doc = await getDocumentById(id);
+  if (!doc) return null;
 
-  if (error || !doc) return null;
-
-  const { data: shares } = await supabaseAdmin
-    .from("shares")
-    .select("user_id")
-    .eq("document_id", id);
+  const sharedUserIds = await getShareUserIds(id);
 
   return {
-    doc: doc as DocumentRow,
-    access: {
-      ownerId: doc.owner_id,
-      sharedUserIds: (shares ?? []).map((s) => s.user_id as string),
-    },
+    doc,
+    access: { ownerId: doc.owner_id, sharedUserIds },
   };
 }

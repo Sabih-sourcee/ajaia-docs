@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getUserIdFromRequest } from "@/lib/currentUser";
 import { getDocumentWithShares } from "@/lib/documents";
 import { canAccessDocument, canManageDocument } from "@/lib/access";
+import { updateDocument, deleteDocument } from "@/lib/db";
 
 // GET /api/documents/:id -> the document, if the user can access it
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -16,10 +16,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "You don't have access to this document." }, { status: 403 });
   }
 
-  const owner = result.doc.owner_id;
   return NextResponse.json({
     document: result.doc,
-    isOwner: owner === userId,
+    isOwner: result.doc.owner_id === userId,
     sharedUserIds: result.access.sharedUserIds,
   });
 }
@@ -37,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json().catch(() => ({}));
-  const updates: Record<string, unknown> = {};
+  const updates: { title?: string; content?: unknown } = {};
 
   if (typeof body.title === "string") {
     const title = body.title.trim();
@@ -55,16 +54,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("documents")
-    .update(updates)
-    .eq("id", params.id)
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json({ document: data });
+  try {
+    const document = await updateDocument(params.id, updates);
+    return NextResponse.json({ document });
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
 }
 
 // DELETE /api/documents/:id -> owner only
@@ -79,8 +74,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ error: "Only the owner can delete this document." }, { status: 403 });
   }
 
-  const { error } = await supabaseAdmin.from("documents").delete().eq("id", params.id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json({ ok: true });
+  try {
+    await deleteDocument(params.id);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
 }

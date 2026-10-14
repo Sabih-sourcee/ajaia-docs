@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getUserIdFromRequest } from "@/lib/currentUser";
 import { validateUploadFile, isMarkdownFile } from "@/lib/fileValidation";
 import { markdownToHtml, plainTextToHtml } from "@/lib/markdown";
+import { createDocument } from "@/lib/db";
 
 // POST /api/upload (multipart/form-data, field "file") -> creates a new
 // document from a .txt or .md file, owned by the current user.
@@ -26,13 +26,14 @@ export async function POST(req: NextRequest) {
 
   const title = file.name.replace(/\.(txt|md)$/i, "") || "Imported document";
 
-  const { data, error } = await supabaseAdmin
-    .from("documents")
-    .insert({ title, content: { type: "html-import", html }, owner_id: userId })
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json({ document: data }, { status: 201 });
+  try {
+    const document = await createDocument({
+      title,
+      content: { type: "html-import", html },
+      ownerId: userId,
+    });
+    return NextResponse.json({ document }, { status: 201 });
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
 }

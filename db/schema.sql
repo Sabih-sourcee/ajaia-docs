@@ -1,5 +1,8 @@
 -- Ajaia Docs schema
--- Run this in the Supabase SQL editor (or via `psql`) before seed.sql.
+-- Run this against your Vercel Postgres database before seed.sql, e.g.:
+--   psql "$POSTGRES_URL_NON_POOLING" -f db/schema.sql
+--   psql "$POSTGRES_URL_NON_POOLING" -f db/seed.sql
+-- or paste both files into the Vercel Storage "Query" tab.
 
 create extension if not exists "pgcrypto";
 
@@ -42,6 +45,8 @@ create trigger documents_set_updated_at
   for each row
   execute function set_updated_at();
 
--- Auth is mocked at the application layer (see README), so Row Level
--- Security is intentionally left off and access control is enforced in
--- the Next.js API routes instead (see lib/access.ts).
+-- Auth is mocked at the application layer (see README), so there is no
+-- database-level RLS; access control is enforced in the Next.js API routes
+-- instead (see src/lib/access.ts). The app also generates document ids in
+-- code (crypto.randomUUID()) rather than relying solely on gen_random_uuid(),
+-- so inserts work even if pgcrypto isn't available on a given Postgres host.
